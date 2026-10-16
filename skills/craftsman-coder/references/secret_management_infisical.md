@@ -48,7 +48,16 @@ infisical secrets get AINA_AGY_OAUTH_TOKEN_JSON \
   --plain > ~/.gemini/antigravity-cli/antigravity-oauth-token
 ```
 
-### E. Export Secrets into Active Shell Session
+### E. Restore GitHub CLI (`gh`) Multi-Account Auth (ihkaru & ipds6104)
+```bash
+mkdir -p ~/.config/gh
+infisical secrets get GH_HOSTS_YML_BASE64 \
+  --projectId f13379e0-9661-4f8e-81ef-0e81d1502da1 --env dev \
+  --plain | base64 -d > ~/.config/gh/hosts.yml
+chmod 600 ~/.config/gh/hosts.yml
+```
+
+### F. Export Secrets into Active Shell Session
 ```bash
 eval $(infisical export --projectId f13379e0-9661-4f8e-81ef-0e81d1502da1 --env dev --format dotenv-export)
 ```
