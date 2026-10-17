@@ -21,6 +21,13 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+if sys.stdout and hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 DEFAULT_KEY_PATH = Path.home() / ".ssh" / "id_ed25519_agent"
 DEFAULT_USER = "server"
 TAILSCALE_HOST = "100.101.49.42"
@@ -50,8 +57,8 @@ class SSHManager:
             "--plain"
         ]
         try:
-            res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
-            self.key_path.write_text(res.stdout)
+            res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace", check=True)
+            self.key_path.write_text(res.stdout, encoding="utf-8")
             self.key_path.chmod(0o600)
         except Exception as e:
             sys.stderr.write(f"Warning: Failed to auto-restore SSH key via Infisical: {e}\n")
@@ -75,7 +82,7 @@ class SSHManager:
                 "echo PING_OK"
             ]
             try:
-                res = subprocess.run(test_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
+                res = subprocess.run(test_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace", timeout=5)
                 if res.returncode == 0 and "PING_OK" in res.stdout:
                     self.active_host = host
                     return host
@@ -99,7 +106,7 @@ class SSHManager:
             command
         ]
         try:
-            res = subprocess.run(ssh_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=timeout)
+            res = subprocess.run(ssh_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace", timeout=timeout)
             return res.returncode, res.stdout, res.stderr
         except subprocess.TimeoutExpired:
             return 124, "", f"Command timed out after {timeout} seconds"
