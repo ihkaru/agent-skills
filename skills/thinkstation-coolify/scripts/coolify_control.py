@@ -486,6 +486,7 @@ def main():
     # 6. Exec
     exec_p = subparsers.add_parser("exec", parents=[common_p], help="Execute arbitrary command on ThinkStation")
     exec_p.add_argument("cmd", help="Command string to run")
+    exec_p.add_argument("--timeout", "-t", type=int, default=120, help="Command timeout in seconds (default: 120)")
 
     args = parser.parse_args()
 
@@ -610,7 +611,7 @@ def main():
                     sys.exit(code)
 
     elif args.command == "exec":
-        code, out, err = ssh.run_remote(args.cmd)
+        code, out, err = ssh.run_remote(args.cmd, timeout=args.timeout)
         if args.json:
             print(json.dumps({
                 "exit_code": code,
