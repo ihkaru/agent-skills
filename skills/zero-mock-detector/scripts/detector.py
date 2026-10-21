@@ -213,7 +213,8 @@ class ZeroMockDetector:
 
                 # Check 1: Mock Symbol Name in Production
                 clean_name = name.lower()
-                if clean_name not in EXCLUDED_SYMBOLS and RE_MOCK_SYMBOL.search(name):
+                is_analyzer = any(clean_name.endswith(suffix) for suffix in ("detector", "auditor", "analyzer", "checker", "scanner"))
+                if clean_name not in EXCLUDED_SYMBOLS and not is_analyzer and RE_MOCK_SYMBOL.search(name):
                     exempted, reason, citation = self.is_symbol_exempted(name, rel_path, code_content)
                     if not exempted:
                         findings.append(Finding(
@@ -342,8 +343,21 @@ class ZeroMockDetector:
                                 code_snippet=line.strip()
                             ))
 
+                    stripped = line.strip()
+                    is_meta_def = (
+                        stripped.startswith(("message=", "message =", "desc=", "desc =", "r\"\"\"", "r'''", "re.compile("))
+                        or "Finding(" in line
+                    )
+                    line_no_str = re.sub(r'"[^"\\]*(?:\\.[^"\\]*)*"|\'[^\'\\]*(?:\\.[^\'\\]*)*\'', '""', line)
+
                     # Check 2: Mock Bypass Environment Flags
-                    if RE_MOCK_BYPASS_FLAG.search(line):
+                    has_bypass_flag = False
+                    if re.search(r"""\b(?:process\.env\.NODE_ENV|process\.env\[['"]NODE_ENV['"]\])\s*===?\s*['"]test['"]""", line):
+                        has_bypass_flag = True
+                    elif re.search(r"""\b(?:MOCK_ENABLED|USE_MOCK|IS_MOCK|MOCK_DATA|MOCK_MODE)\b""", line_no_str):
+                        has_bypass_flag = True
+
+                    if not is_meta_def and has_bypass_flag:
                         findings.append(Finding(
                             rule_id="RULE_MOCK_BYPASS_FLAG",
                             severity=Severity.MEDIUM,
@@ -358,7 +372,9 @@ class ZeroMockDetector:
                     mock_def_match = re.search(r"""^\s*(?:pub\s+)?(?:class|struct|fn|def|interface|type)\s+([A-Za-z0-9_]*mock[A-Za-z0-9_]*)""", line, re.IGNORECASE)
                     if mock_def_match:
                         sym = mock_def_match.group(1)
-                        if sym.lower() not in EXCLUDED_SYMBOLS:
+                        clean_sym = sym.lower()
+                        is_analyzer = any(clean_sym.endswith(suffix) for suffix in ("detector", "auditor", "analyzer", "checker", "scanner"))
+                        if clean_sym not in EXCLUDED_SYMBOLS and not is_analyzer:
                             prev_lines = "".join(lines[max(0, idx - 4):idx])
                             exempted, reason, citation = self.is_symbol_exempted(sym, rel_path, prev_lines)
                             if not exempted:
@@ -373,7 +389,14 @@ class ZeroMockDetector:
                                 ))
 
                     # Check 4: Stubbed Code in Production
-                    if RE_STUBBED_CODE.search(line):
+                    has_stubbed_code = False
+                    if re.search(r"""\b(?:todo!|unimplemented!)\s*\(""", line_no_str):
+                        has_stubbed_code = True
+                    elif re.search(r"""\b(?:throw\s+new\s+Error|raise\s+NotImplementedError)\b""", line_no_str):
+                        if re.search(r"""(?:todo|stub|mock|not\s+implemented)""", line, re.IGNORECASE):
+                            has_stubbed_code = True
+
+                    if not is_meta_def and has_stubbed_code:
                         prev_lines = "".join(lines[max(0, idx - 4):idx])
                         exempted, reason, citation = self.is_symbol_exempted(None, rel_path, prev_lines)
                         if not exempted:

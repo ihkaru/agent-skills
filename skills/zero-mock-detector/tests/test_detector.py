@@ -176,5 +176,17 @@ def sync_frame():
         findings = detector.scan()
         self.assertFalse(any(f.rule_id == "RULE_STUBBED_CODE" for f in findings))
 
+    def test_detector_self_scan_false_positive_prevention(self):
+        # Tools, analyzers, and regex/message definitions should not trigger false positives
+        self.write_file("src/analyzer.py", """
+class MockScannerDetector:
+    def __init__(self):
+        self.desc = "Production code contains stubbed todo!() / unimplemented!() logic"
+        self.msg = "Production code contains mock bypass flag (e.g. NODE_ENV === 'test' or MOCK_ENABLED)"
+""")
+        detector = ZeroMockDetector(self.test_dir, use_codegraph=False)
+        findings = detector.scan()
+        self.assertEqual(len(findings), 0)
+
 if __name__ == "__main__":
     unittest.main()

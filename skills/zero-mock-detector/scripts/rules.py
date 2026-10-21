@@ -76,7 +76,8 @@ RE_MOCK_SYMBOL = re.compile(
 # Legitimate exclusions to avoid false positives
 EXCLUDED_SYMBOLS: Set[str] = {
     "mocktail", "stubborn", "packet_stuffer", "stuffer", "hash_table",
-    "stub", "stubs", "dummy"
+    "stub", "stubs", "dummy", "zeromockdetector", "mockdetector", "mockauditor",
+    "mockanalyzer", "mockchecker", "mockscanner"
 }
 
 # Rule 3: Fake latency / Simulated network delay
