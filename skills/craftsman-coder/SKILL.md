@@ -108,14 +108,23 @@ python3 ~/.gemini/config/skills/craftsman-coder/scripts/codegraph_impact.py <pat
      ```bash
      python3 ~/.gemini/config/skills/craftsman-coder/scripts/static_srp_analyzer.py <path_to_repo> --strict
      ```
-  3. **Linter & Static Analysis** (e.g. `ruff check .`, `eslint`, `golangci-lint`)
-  4. **Type Checking** (e.g. `mypy`, `tsc --noEmit`)
-  5. **Full Test Suite** executed in parallel (e.g. `pytest -n auto`, `go test -parallel 4 ./...`)
+  3. **Zero-Mock & Silent Fallback Audit (Dual-Tier Verification Gate):**
+     ```bash
+     detect-mocks <path_to_repo> --strict
+     ```
+  4. **Linter & Static Analysis** (e.g. `ruff check .`, `eslint`, `golangci-lint`)
+  5. **Type Checking** (e.g. `mypy`, `tsc --noEmit`)
+  6. **Full Test Suite** executed in parallel (e.g. `pytest -n auto`, `go test -parallel 4 ./...`)
 - Provide terminal evidence (exit codes, passing test summary) in your final response.
 
 ---
 
 ## Built-in Scripts & Tools
+
+- **Zero-Mock & Silent Fallback Static Detector:**
+  `detect-mocks` / [`skills/zero-mock-detector/`](../zero-mock-detector/)
+  - Inspects AST and code paths for mock frameworks, fake latency, silent fallbacks, bodyless stubs, and agent note pollution.
+  - Automatically respects repository-level debt ledgers (`docs/TECHNICAL_DEBT.md` / `.zero-mock-allowlist.json`) while enforcing zero-mock in global tools.
 
 - **CodeGraph AST Impact Analyzer:**
   [`scripts/codegraph_impact.py`](./scripts/codegraph_impact.py)

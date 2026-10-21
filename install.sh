@@ -70,6 +70,18 @@ if [ -f "${SCRIPT_DIR}/skills/craftsman-coder/scripts/vsa_boundary_checker.py" ]
     echo "  ✅ Command: vsa-boundary-checker"
 fi
 
+# detect-mocks & zero-mock-detector
+if [ -f "${SCRIPT_DIR}/skills/zero-mock-detector/scripts/main.py" ]; then
+    ln -sf "${SCRIPT_DIR}/skills/zero-mock-detector/scripts/main.py" "${TARGET_BIN_DIR}/detect-mocks"
+    ln -sf "${SCRIPT_DIR}/skills/zero-mock-detector/scripts/main.py" "${TARGET_BIN_DIR}/zero-mock-detector"
+    # Also update /usr/local/bin if running as root
+    if [ "$(id -u)" -eq 0 ]; then
+        ln -sf "${SCRIPT_DIR}/skills/zero-mock-detector/scripts/main.py" "/usr/local/bin/detect-mocks"
+        ln -sf "${SCRIPT_DIR}/skills/zero-mock-detector/scripts/main.py" "/usr/local/bin/zero-mock-detector"
+    fi
+    echo "  ✅ Command: detect-mocks / zero-mock-detector"
+fi
+
 # 5. Run Verification Gauntlet
 echo "🧪 Running verification tests..."
 python3 "${SCRIPT_DIR}/skills/craftsman-coder/scripts/test_codegraph_impact.py"
@@ -77,6 +89,9 @@ python3 "${SCRIPT_DIR}/skills/craftsman-coder/scripts/test_static_srp_analyzer.p
 python3 "${SCRIPT_DIR}/skills/craftsman-coder/scripts/test_vsa_boundary_checker.py"
 if [ -f "${SCRIPT_DIR}/skills/thinkstation-coolify/scripts/test_coolify_control.py" ]; then
     python3 "${SCRIPT_DIR}/skills/thinkstation-coolify/scripts/test_coolify_control.py"
+fi
+if [ -f "${SCRIPT_DIR}/skills/zero-mock-detector/tests/test_detector.py" ]; then
+    python3 "${SCRIPT_DIR}/skills/zero-mock-detector/tests/test_detector.py"
 fi
 
 echo ""

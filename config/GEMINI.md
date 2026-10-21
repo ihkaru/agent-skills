@@ -94,3 +94,16 @@ When building or recommending tools and skills for AI agents:
 - **Mandatory Repository-Level `GEMINI.md`:**
   - Whenever initializing or structuring any repository, **always create a `GEMINI.md` at the repository root** to persist architectural choices, slice rules, and verification commands.
   - **Strict Portability & Anti-Leak Rule:** Because repo-level `GEMINI.md` is committed and pushed to git, it **MUST NOT reference anything outside the repository** (no local paths like `~/.gemini/...` or `/data/data/...`, no machine-specific environments or credentials). It must remain 100% self-contained, portable, and reproducible for any team member or CI runner.
+
+## 14. Dual-Tier Verification & Repository-Level Technical Debt Ledgers
+- **Separation of Global Tooling vs Repository-Level Ledgers:**
+  - Global tools (e.g. `detect-mocks`, `static-srp-analyzer`, `craftsman-coder`) enforce universal AST invariant rules and parsers. They must **NEVER** store project-specific exemptions or machine-local states.
+  - Project-specific exemptions, cited technical debts, and temporary hardware/upstream blockers MUST live **100% inside the project repository** (e.g., `docs/TECHNICAL_DEBT.md`, `docs/dev/debt/<modul>.md`, or `.zero-mock-allowlist.json`).
+- **Fail-Fast Throw by Default (Zero Silent Fallbacks):**
+  - Unimplemented trait methods, interface contracts, or unverified hardware paths MUST throw explicit typed errors (`throw NotImplementedError()`, `todo!()`, `unimplemented!()`), **NEVER** silent stubs returning dummy successes (`return 0`, `return true`, `Ok(())`, `return None`).
+- **Citation Contract for Every Ledger Exemption:**
+  - Every exemption registered in the repo-level debt ledger must cite a concrete ground truth: issue ID, external RFC, hardware silicon measurement, or upstream blocker.
+- **Zero Agent Note & Scratch Pollution:**
+  - Never commit temporary agent scratch files (`notes.md`, `agent_notes.*`, `scratch_*.py`, `temp_*.py`, `*.log`) to production directories.
+- **Zero Rationalizing Comments:**
+  - Prohibit comments attempting to rationalize fake/mock behavior (e.g. `// assume success for now`, `// dummy mock for testing`, `// fake return`). Real evidence (tests, measurements, ledger) must replace rationalizing comments.
