@@ -82,13 +82,19 @@ if [ -f "${SCRIPT_DIR}/skills/zero-mock-detector/scripts/main.py" ]; then
     echo "  ✅ Command: detect-mocks / zero-mock-detector"
 fi
 
-# arc42-lint
+# arc42-lint & arc42-pre-commit
 if [ -f "${SCRIPT_DIR}/skills/arc42-architect/scripts/arc42-lint.py" ]; then
     ln -sf "${SCRIPT_DIR}/skills/arc42-architect/scripts/arc42-lint.py" "${TARGET_BIN_DIR}/arc42-lint"
+    if [ -f "${SCRIPT_DIR}/skills/arc42-architect/scripts/arc42-pre-commit" ]; then
+        ln -sf "${SCRIPT_DIR}/skills/arc42-architect/scripts/arc42-pre-commit" "${TARGET_BIN_DIR}/arc42-pre-commit"
+    fi
     if [ "$(id -u)" -eq 0 ]; then
         ln -sf "${SCRIPT_DIR}/skills/arc42-architect/scripts/arc42-lint.py" "/usr/local/bin/arc42-lint"
+        if [ -f "${SCRIPT_DIR}/skills/arc42-architect/scripts/arc42-pre-commit" ]; then
+            ln -sf "${SCRIPT_DIR}/skills/arc42-architect/scripts/arc42-pre-commit" "/usr/local/bin/arc42-pre-commit"
+        fi
     fi
-    echo "  ✅ Command: arc42-lint"
+    echo "  ✅ Command: arc42-lint / arc42-pre-commit"
 fi
 
 # 5. Run Verification Gauntlet

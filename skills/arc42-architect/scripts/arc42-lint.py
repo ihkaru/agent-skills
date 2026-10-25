@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
-"""arc42 cross-section consistency, git provenance & architecture drift linter.
+"""arc42 cross-section consistency, git provenance, drift & pre-commit linter.
 
 Usage:
     arc42-lint [docs_path] [--lang LANG] [--format text|github|json] [--json]
                            [--strict] [--check-drift] [--drift-threshold N]
                            [--max-age-days DAYS] [--require-provenance]
+                           [--pre-commit] [--install-hook [REPO_PATH]]
+
+Commands:
+    arc42-lint                    Audit architecture documents in docs/architecture
+    arc42-lint --pre-commit       Run pre-commit gate (checks staged files & drift thresholds)
+    arc42-lint --install-hook     Install pre-commit hook into current git repository (.git/hooks/pre-commit)
 
 Rules:
     RULE-1  Section 3 ↔ Section 5: Interface IDs (IF-xx)
@@ -14,10 +20,11 @@ Rules:
     RULE-5  Section 10 ↔ Section 11: Aspirational scenario traceability
     RULE-6  Architecture Provenance: Commit SHA & timestamp presence
     RULE-7  Architecture Drift: Git commit distance & staleness verification
+    RULE-8  Staged Implementation Drift: Staged source files modified without doc updates
 
 Exit codes:
     0  no issues (or only warnings in non-strict mode)
-    1  one or more errors found (or warnings with --strict)
+    1  one or more errors found (or warnings with --strict / --pre-commit)
 """
 
 from __future__ import annotations
@@ -175,7 +182,6 @@ class SectionData:
     sec5_path:  str = ""
     sec9_path:  str = ""
     sec10_path: str = ""
-    # Provenance tracking per section
     provenance_by_section: dict[int, SectionProvenance] = field(default_factory=dict)
 
 
@@ -211,7 +217,6 @@ def extract_provenance(content: str, sec_num: int, file_path: str) -> SectionPro
             if m_branch:
                 prov.branch = m_branch.group(1).strip()
 
-            # Tracked paths in frontmatter
             m_paths = re.search(r"tracked_paths:\s*\n((?:\s*-\s*[^\n]+\n?)+)", fm)
             if m_paths:
                 for line in m_paths.group(1).splitlines():
@@ -431,7 +436,6 @@ def load_docs(docs_path: Path, lang: dict) -> SectionData:
 
 
 def _populate(data: SectionData, sec: int, content: str, src: str, lang: dict) -> None:
-    # Always extract provenance
     prov = extract_provenance(content, sec, src)
     data.provenance_by_section[sec] = prov
 
@@ -474,6 +478,30 @@ def find_git_toplevel(start_path: Path) -> Path | None:
     except Exception:
         pass
     return None
+
+
+def get_staged_files(git_root: Path) -> list[str]:
+    """Retrieve list of files currently staged for commit."""
+    try:
+        out = subprocess.check_output(
+            ["git", "-C", str(git_root), "diff", "--cached", "--name-only"],
+            stderr=subprocess.DEVNULL,
+            timeout=5,
+        )
+        return [f.strip() for f in out.decode().splitlines() if f.strip()]
+    except Exception:
+        return []
+
+
+def _matches_tracked_path(file_path: str, tracked_paths: list[str]) -> bool:
+    """Check if file_path falls under any tracked path pattern."""
+    for tp in tracked_paths:
+        tp_clean = tp.strip().rstrip("/")
+        if not tp_clean:
+            continue
+        if file_path == tp_clean or file_path.startswith(tp_clean + "/"):
+            return True
+    return False
 
 
 def run_drift_analysis(
@@ -561,7 +589,7 @@ def run_drift_analysis(
 
 
 # ---------------------------------------------------------------------------
-# Consistency & Drift Rules
+# Consistency, Drift & Pre-Commit Rules
 # ---------------------------------------------------------------------------
 
 def rule_interface_consistency(data: SectionData) -> list[LintIssue]:
@@ -615,6 +643,9 @@ def rule_component_in_deployment(data: SectionData) -> list[LintIssue]:
 def rule_quality_tag_coverage(data: SectionData) -> list[LintIssue]:
     """Rule 3: Every Q42 tag used in Section 10 must appear in Section 1.2 quality goals."""
     issues: list[LintIssue] = []
+
+    if not data.sec10_quality_tags:
+        return issues
 
     if not data.sec10_quality_tags:
         return issues
@@ -739,6 +770,56 @@ def rule_architecture_drift(
     return issues
 
 
+def rule_staged_source_drift(
+    data: SectionData,
+    staged_files: list[str],
+    git_root: Path | None,
+    drift_threshold: int = 15,
+    max_age_days: int = 30,
+    strict_staged: bool = False,
+) -> list[LintIssue]:
+    """Rule 8: Flag staged implementation changes that modify tracked paths without updating doc."""
+    issues: list[LintIssue] = []
+    if not staged_files or not git_root:
+        return issues
+
+    staged_set = set(staged_files)
+
+    for sec, prov in sorted(data.provenance_by_section.items()):
+        if not prov.tracked_paths:
+            continue
+
+        try:
+            rel_doc = str(Path(prov.file_path).resolve().relative_to(git_root.resolve()))
+        except Exception:
+            rel_doc = prov.file_path
+
+        doc_is_staged = rel_doc in staged_set or any(rel_doc.endswith(s) for s in staged_set)
+
+        matching_staged: list[str] = []
+        for sf in staged_files:
+            if _matches_tracked_path(sf, prov.tracked_paths):
+                matching_staged.append(sf)
+
+        if matching_staged and not doc_is_staged:
+            is_critical = (
+                strict_staged
+                or (prov.commit_distance is not None and prov.commit_distance >= drift_threshold)
+                or (prov.days_old is not None and prov.days_old >= max_age_days)
+            )
+            sev = "error" if is_critical else "warning"
+            sample = ", ".join(matching_staged[:3])
+            more = f" (+{len(matching_staged) - 3} more)" if len(matching_staged) > 3 else ""
+            issues.append(LintIssue(
+                "RULE-8", sev, prov.file_path, -1,
+                f"Section {sec:02d} implementation modified in staged commit ({sample}{more}) "
+                f"but architecture document '{rel_doc}' is NOT staged for update. "
+                f"Baseline commit: {prov.verified_commit[:8] if prov.verified_commit else 'missing'}",
+            ))
+
+    return issues
+
+
 RULE_DESCRIPTIONS = {
     "RULE-1": "Section 3 ↔ Section 5  Interface IDs (IF-xx)",
     "RULE-2": "Section 5 ↔ Section 7  Building block deployment coverage",
@@ -747,6 +828,7 @@ RULE_DESCRIPTIONS = {
     "RULE-5": "Section 10 ↔ Section 11 Aspirational scenario traceability",
     "RULE-6": "Provenance Metadata   Commit SHA & timestamp tracking",
     "RULE-7": "Architecture Drift    Git baseline staleness & source drift",
+    "RULE-8": "Staged Implementation Staged source files modified without doc update",
 }
 
 
@@ -756,6 +838,9 @@ def run_all_rules(
     check_drift: bool = True,
     drift_threshold: int = 15,
     max_age_days: int = 30,
+    staged_files: list[str] | None = None,
+    git_root: Path | None = None,
+    strict_staged: bool = False,
 ) -> list[LintIssue]:
     issues: list[LintIssue] = []
     issues.extend(rule_interface_consistency(data))
@@ -766,17 +851,23 @@ def run_all_rules(
     issues.extend(rule_provenance_metadata(data, require_provenance=require_provenance))
     if check_drift:
         issues.extend(rule_architecture_drift(data, drift_threshold=drift_threshold, max_age_days=max_age_days))
+    if staged_files and git_root:
+        issues.extend(rule_staged_source_drift(
+            data, staged_files, git_root,
+            drift_threshold=drift_threshold,
+            max_age_days=max_age_days,
+            strict_staged=strict_staged,
+        ))
     return issues
 
 
 # ---------------------------------------------------------------------------
-# Output formatters
+# Output Formatters
 # ---------------------------------------------------------------------------
 
 def format_text(issues: list[LintIssue], data: SectionData, docs_path: Path, lang_name: str) -> str:
     lines: list[str] = [f"arc42-lint: checking {docs_path} [{lang_name}]\n"]
 
-    # Provenance summary table
     if data.provenance_by_section:
         lines.append("─" * 78)
         lines.append("Architecture Provenance & Staleness Overview:")
@@ -816,6 +907,40 @@ def format_text(issues: list[LintIssue], data: SectionData, docs_path: Path, lan
     if warnings:
         parts.append(f"{warnings} warning{'s' if warnings != 1 else ''}")
     lines.append("Found " + ", ".join(parts))
+    return "\n".join(lines)
+
+
+def format_pre_commit(issues: list[LintIssue], data: SectionData, docs_path: Path) -> str:
+    """Format an actionable pre-commit terminal report blocking commit."""
+    lines = [
+        "═" * 78,
+        "🛑 [arc42 Pre-Commit Gate] Architecture Documentation Update Required!",
+        "═" * 78,
+        "The commit cannot proceed because architecture documentation has drifted",
+        "past configured thresholds or source files were modified without doc updates:\n",
+    ]
+
+    by_file: dict[str, list[LintIssue]] = {}
+    for issue in issues:
+        by_file.setdefault(issue.file, []).append(issue)
+
+    for f, iss in by_file.items():
+        fname = Path(f).name
+        lines.append(f"  📄 {fname} ({f}):")
+        for i in iss:
+            lines.append(f"     • [{i.rule}] {i.message}")
+        lines.append("")
+
+    lines.extend([
+        "💡 Action Required:",
+        "   1. Review and update the relevant architecture files in docs/architecture/",
+        "   2. Update 'Verified Commit' to HEAD and bump 'Verified Timestamp'",
+        "   3. Stage the documentation update: git add docs/architecture/",
+        "",
+        "ℹ️  To bypass this check in an emergency:",
+        "   SKIP_ARC42_LINT=1 git commit -m '...'",
+        "═" * 78,
+    ])
     return "\n".join(lines)
 
 
@@ -878,12 +1003,70 @@ def format_json(issues: list[LintIssue], data: SectionData, docs_path: Path, lan
 
 
 # ---------------------------------------------------------------------------
+# Pre-Commit Hook Installer
+# ---------------------------------------------------------------------------
+
+def install_hook(target_dir: Path | None = None) -> int:
+    """Install standalone pre-commit hook into target git repository."""
+    base = target_dir or Path.cwd()
+    git_root = find_git_toplevel(base)
+    if not git_root:
+        print(f"arc42-lint: error: '{base}' is not inside a git repository.", file=sys.stderr)
+        return 1
+
+    hook_path = git_root / ".git" / "hooks" / "pre-commit"
+    hook_path.parent.mkdir(parents=True, exist_ok=True)
+
+    hook_script = """#!/usr/bin/env bash
+# ==============================================================================
+# arc42 Architecture Drift & Consistency Gate (Pre-Commit Hook)
+# ==============================================================================
+set -e
+
+if [ "${SKIP_ARC42_LINT:-0}" = "1" ] || [ "${SKIP_DOC_GATE:-0}" = "1" ]; then
+    echo "ℹ️  arc42-lint: Pre-commit gate bypassed via SKIP_ARC42_LINT=1"
+    exit 0
+fi
+
+# Execute arc42-lint in pre-commit mode
+if command -v arc42-lint >/dev/null 2>&1; then
+    exec arc42-lint --pre-commit
+elif command -v arc42-pre-commit >/dev/null 2>&1; then
+    exec arc42-pre-commit
+elif [ -f "${HOME}/.local/bin/arc42-lint" ]; then
+    exec "${HOME}/.local/bin/arc42-lint" --pre-commit
+else
+    echo "⚠️  arc42-lint not found in PATH; skipping pre-commit architecture gate."
+    exit 0
+fi
+"""
+    hook_path.write_text(hook_script, encoding="utf-8")
+    hook_path.chmod(0o755)
+    print(f"✅ Successfully installed arc42 pre-commit hook to {hook_path}")
+    print("   The hook will deterministically verify architecture freshness on every 'git commit'.")
+    print("   To bypass in emergency: SKIP_ARC42_LINT=1 git commit -m '...'")
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # CLI Entrypoint
 # ---------------------------------------------------------------------------
 
 def main() -> None:
+    # 0. Check bypass environment variables
+    if os.environ.get("SKIP_ARC42_LINT") == "1" or os.environ.get("SKIP_DOC_GATE") == "1":
+        print("ℹ️  arc42-lint: Architecture gate bypassed via SKIP_ARC42_LINT=1")
+        sys.exit(0)
+
+    # Threshold environment variables fallback
+    env_drift = os.environ.get("ARC42_DRIFT_THRESHOLD")
+    default_drift = int(env_drift) if env_drift and env_drift.isdigit() else 15
+
+    env_age = os.environ.get("ARC42_MAX_AGE_DAYS")
+    default_age = int(env_age) if env_age and env_age.isdigit() else 30
+
     parser = argparse.ArgumentParser(
-        description="arc42 architecture consistency, git provenance, and drift linter.",
+        description="arc42 architecture consistency, git provenance, drift & pre-commit linter.",
     )
     parser.add_argument(
         "docs_path", nargs="?", default="docs/architecture",
@@ -914,18 +1097,36 @@ def main() -> None:
         help="Disable git drift verification",
     )
     parser.add_argument(
-        "--drift-threshold", type=int, default=15,
-        help="Max commit delta allowed before triggering a drift warning (default: 15)",
+        "--drift-threshold", type=int, default=default_drift,
+        help=f"Max commit delta allowed before triggering a drift warning (default: {default_drift})",
     )
     parser.add_argument(
-        "--max-age-days", type=int, default=30,
-        help="Max days since verification before triggering a staleness warning (default: 30)",
+        "--max-age-days", type=int, default=default_age,
+        help=f"Max days since verification before triggering a staleness warning (default: {default_age})",
     )
     parser.add_argument(
         "--require-provenance", action="store_true",
         help="Treat missing provenance metadata as error instead of warning",
     )
+    parser.add_argument(
+        "--pre-commit", action="store_true",
+        help="Run in Git pre-commit mode: inspects staged changes & blocks stale/drifting commits",
+    )
+    parser.add_argument(
+        "--install-hook", nargs="?", const=".", metavar="REPO_PATH",
+        help="Install pre-commit hook into specified repository (.git/hooks/pre-commit)",
+    )
+
     args = parser.parse_args()
+
+    # Handle --install-hook
+    if args.install_hook is not None:
+        target = Path(args.install_hook).resolve()
+        sys.exit(install_hook(target))
+
+    # Fallback if first argument was 'install-hook'
+    if args.docs_path == "install-hook":
+        sys.exit(install_hook(Path.cwd()))
 
     if args.json_flag:
         args.format = "json"
@@ -934,12 +1135,16 @@ def main() -> None:
     lang = load_language(args.lang, script_path)
 
     docs = Path(args.docs_path)
-    # Fallback to docs/ if docs/architecture does not exist and default was used
     if not docs.exists() and args.docs_path == "docs/architecture":
         if Path("docs").exists():
             docs = Path("docs")
 
+    git_root = find_git_toplevel(docs if docs.exists() else Path.cwd())
+
+    # In pre-commit mode, if docs don't exist, don't fail unrelated repositories
     if not docs.exists():
+        if args.pre_commit:
+            sys.exit(0)
         if args.format == "json":
             print(json.dumps({"error": f"Path '{docs}' does not exist", "summary": {"passed": True, "errors": 0}}))
         else:
@@ -949,13 +1154,18 @@ def main() -> None:
     data = load_docs(docs, lang)
 
     if not data.provenance_by_section:
+        if args.pre_commit:
+            sys.exit(0)
         if args.format == "json":
             print(json.dumps({"error": f"No arc42 sections detected in '{docs}'", "summary": {"passed": True, "errors": 0}}))
         else:
             print(f"arc42-lint: no arc42 sections detected in '{docs}' — nothing to lint.")
         sys.exit(0)
 
-    git_root = find_git_toplevel(docs)
+    staged_files: list[str] = []
+    if git_root:
+        staged_files = get_staged_files(git_root)
+
     if args.check_drift and git_root:
         run_drift_analysis(
             data,
@@ -964,15 +1174,37 @@ def main() -> None:
             max_age_days=args.max_age_days,
         )
 
+    strict_staged = args.pre_commit or args.strict
+    require_prov = args.require_provenance or args.pre_commit
+
     issues = run_all_rules(
         data,
-        require_provenance=args.require_provenance,
+        require_provenance=require_prov,
         check_drift=args.check_drift and bool(git_root),
         drift_threshold=args.drift_threshold,
         max_age_days=args.max_age_days,
+        staged_files=staged_files if (args.pre_commit or staged_files) else None,
+        git_root=git_root,
+        strict_staged=strict_staged,
     )
 
     lang_name = lang.get("name", args.lang)
+    errors = sum(1 for i in issues if i.severity == "error")
+    warnings = sum(1 for i in issues if i.severity == "warning")
+
+    # Pre-commit mode formatting
+    if args.pre_commit:
+        blocking_issues = [i for i in issues if i.severity == "error" or (args.strict and i.severity == "warning")]
+        drift_blockers = [i for i in issues if i.rule in ("RULE-7", "RULE-8") and ("drift" in i.message.lower() or "stale" in i.message.lower() or "staged" in i.message.lower() or "modified" in i.message.lower())]
+        all_blockers = list({id(x): x for x in (blocking_issues + drift_blockers)}.values())
+
+        if all_blockers:
+            print(format_pre_commit(all_blockers, data, docs), file=sys.stderr)
+            sys.exit(1)
+        else:
+            print("✅ [arc42 Pre-Commit Gate] Architecture documentation is fresh & verified.")
+            sys.exit(0)
+
     if args.format == "json":
         output = format_json(issues, data, docs, lang_name)
     elif args.format == "github":
@@ -982,9 +1214,6 @@ def main() -> None:
 
     if output:
         print(output)
-
-    errors = sum(1 for i in issues if i.severity == "error")
-    warnings = sum(1 for i in issues if i.severity == "warning")
 
     if errors:
         sys.exit(1)

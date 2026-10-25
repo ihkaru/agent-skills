@@ -1,0 +1,7 @@
+- id: arc42-lint
+  name: arc42 Architecture Drift & Consistency Gate
+  description: Deterministically checks for stale or drifting arc42 architecture documentation before commit
+  entry: arc42-lint --pre-commit
+  language: python
+  pass_filenames: false
+  always_run: true

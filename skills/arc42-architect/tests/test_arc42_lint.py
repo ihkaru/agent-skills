@@ -2,6 +2,7 @@
 """Hermetic unit tests for arc42-lint with Git Provenance & Drift Analysis."""
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -185,6 +186,49 @@ verified_timestamp: 2026-10-25T18:00:00Z
 """)
         data = arc42_lint.load_docs(self.docs_dir, self.lang_id)
         self.assertIn(1, data.provenance_by_section)
+
+    def test_rule8_staged_source_drift(self):
+        sec5 = self.docs_dir / "05_building_block_view.md"
+        sec5.write_text("""---
+arc42_section: 5
+verified_commit: 11223344
+verified_timestamp: 2026-10-25T18:00:00Z
+tracked_paths:
+  - src/auth
+---
+# 5. Building Block View
+""")
+        data = arc42_lint.load_docs(self.docs_dir, self.lang_en)
+        # Case 1: Staged file modifies tracked path 'src/auth/handler.rs', but doc is not staged
+        staged = ["src/auth/handler.rs"]
+        issues = arc42_lint.rule_staged_source_drift(
+            data, staged, Path(self.temp_dir.name), drift_threshold=5, strict_staged=True
+        )
+        self.assertEqual(len(issues), 1)
+        self.assertEqual(issues[0].rule, "RULE-8")
+        self.assertEqual(issues[0].severity, "error")
+        self.assertIn("src/auth/handler.rs", issues[0].message)
+
+        # Case 2: Doc is also staged -> no issue
+        rel_doc = str(sec5.relative_to(Path(self.temp_dir.name)))
+        staged_with_doc = ["src/auth/handler.rs", rel_doc]
+        issues_ok = arc42_lint.rule_staged_source_drift(
+            data, staged_with_doc, Path(self.temp_dir.name), drift_threshold=5, strict_staged=True
+        )
+        self.assertEqual(len(issues_ok), 0)
+
+    def test_install_pre_commit_hook(self):
+        repo_root = Path(self.temp_dir.name)
+        subprocess.check_call(["git", "-C", str(repo_root), "init", "-q"])
+        res = arc42_lint.install_hook(repo_root)
+        self.assertEqual(res, 0)
+
+        hook_file = repo_root / ".git" / "hooks" / "pre-commit"
+        self.assertTrue(hook_file.exists())
+        self.assertTrue(os.access(hook_file, os.X_OK))
+        content = hook_file.read_text()
+        self.assertIn("arc42-lint --pre-commit", content)
+        self.assertIn("SKIP_ARC42_LINT", content)
 
 
 if __name__ == "__main__":

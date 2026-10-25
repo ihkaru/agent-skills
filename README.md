@@ -35,6 +35,7 @@ A disciplined, repo-agnostic engineering configuration, skills, and deterministi
 
 ### 5. Deterministic Built-in CLI Tools (Installed to `~/.local/bin/`)
 - **`arc42-lint`**: arc42 cross-section consistency, git provenance, and architecture drift linter (`--json`, `--check-drift`, `--strict`).
+- **`arc42-pre-commit`**: Automated Git pre-commit gate blocking stale documentation and unstaged architecture changes (`arc42-lint --install-hook`).
 - **`detect-mocks` / `zero-mock-detector`**: Production mock leakage and bodyless stub static detector.
 - **`coolify-control`**: Agnostic container discovery, live log inspection, deployment logs, and database query CLI.
 - **`codegraph-impact`**: AST & CodeGraph blast radius analyzer (callers, callees, affected test suites).

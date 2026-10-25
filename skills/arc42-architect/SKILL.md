@@ -112,7 +112,7 @@ When documenting or auditing any section, read its dedicated guidance in `refere
 
 ---
 
-## 🔬 Deterministic Verification: `arc42-lint`
+## 🔬 Deterministic Verification: `arc42-lint` & `arc42-pre-commit`
 
 Run the built-in linter to audit cross-section consistency, git provenance, and architecture drift:
 
@@ -130,7 +130,48 @@ arc42-lint docs/architecture --strict --drift-threshold 10 --max-age-days 14
 arc42-lint docs/architecture --lang id
 ```
 
-### The 7 Automated Verification Rules:
+### 🪝 Automated Pre-Commit Hook Integration
+
+To ensure documentation never rots during active coding cycles, link `arc42-lint` to Git pre-commit:
+
+#### 1. One-Command Hook Installation
+Install the deterministic pre-commit hook into any repository:
+```bash
+# In the root of your target project
+arc42-lint --install-hook
+```
+This generates `.git/hooks/pre-commit`. On every `git commit`:
+- Inspects staged files (`git diff --cached --name-only`).
+- Enforces **RULE-8**: Blocks commits if staged source files modify a section's `tracked_paths` without updating the corresponding architecture markdown file.
+- Enforces **RULE-7**: Blocks commits if any section has drifted past `drift_threshold` (default: 15 commits) or `max_age_days` (default: 30 days).
+
+#### 2. Standalone Pre-Commit Gate CLI
+Run pre-commit verification manually before committing:
+```bash
+arc42-pre-commit
+# or
+arc42-lint --pre-commit
+```
+
+#### 3. Pre-Commit Framework Support (`.pre-commit-config.yaml`)
+In repositories utilizing the Python `pre-commit` framework:
+```yaml
+repos:
+  - repo: https://github.com/ihkaru/agent-skills
+    rev: main
+    hooks:
+      - id: arc42-lint
+```
+
+#### 4. Emergency Bypass
+To commit urgently without blocking:
+```bash
+SKIP_ARC42_LINT=1 git commit -m "Emergency fix"
+# or standard git flag:
+git commit --no-verify -m "Emergency fix"
+```
+
+### The 8 Automated Verification Rules:
 1. **`RULE-1` (Interface IDs)**: Every `IF-xx` in Section 3 must match Section 5 Level-1 building blocks, and vice versa.
 2. **`RULE-2` (Deployment Coverage)**: Every Section 5 building block must appear in Section 7's deployment view.
 3. **`RULE-3` (Quality Tag Traceability)**: Every Q42 tag (`#tag`) in Section 10 quality scenarios must exist in Section 1.2 quality goals.
@@ -138,3 +179,4 @@ arc42-lint docs/architecture --lang id
 5. **`RULE-5` (Aspirational Scenarios)**: Every aspirational scenario from Section 10.3 must be tracked in Section 11.
 6. **`RULE-6` (Provenance Metadata)**: Every section must define `Verified Commit` and `Verified Timestamp`.
 7. **`RULE-7` (Architecture Drift & Staleness)**: Flags missing commit SHAs, commit delta > threshold, or stale documents older than max age.
+8. **`RULE-8` (Staged Implementation Drift)**: Blocks commits when staged code changes touch a section's `tracked_paths` while the architecture document is not updated.
