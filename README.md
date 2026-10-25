@@ -21,13 +21,27 @@ A disciplined, repo-agnostic engineering configuration, skills, and deterministi
 - Container-agnostic application discovery, live log inspection, and deployment queue tracking.
 - Automated database engine classification (**PostgreSQL, MySQL, MariaDB, Redis**) with auto-credential query execution.
 
-### 3. Deterministic Built-in CLI Tools (Installed to `~/.local/bin/`)
+### 3. arc42 Architecture & Drift Tracking Skill (`arc42-architect`)
+- Guides modular architecture documentation following the international **arc42** standard (ISO/IEC/IEEE 42010 aligned).
+- Enforces **Numbered Modular Files** (`01_` to `12_` in `docs/architecture/`) preventing oversized markdown files.
+- **Git Provenance & Freshness**: Embeds baseline commit SHA and timestamp per section to track documentation staleness.
+- **Architecture Drift Detection**: Deterministic audit via `arc42-lint` to detect when source code has evolved past documentation.
+- Supports native **Mermaid C4** diagrams (`C4Context`, `C4Container`, `C4Component`, sequence flows) and **Q42 Quality Model** (492 tags across 8 properties).
+- Tailored for both greenfield systems and **in-flight / half-baked project reverse engineering**.
+
+### 4. Zero-Mock & Static Invariant Detector (`zero-mock-detector`)
+- High-precision AST static analyzer detecting mock leakage, silent dummies, bodyless stubs, and fake latency in production pathways.
+- Enforces Dual-Tier Verification and repository-level technical debt citations.
+
+### 5. Deterministic Built-in CLI Tools (Installed to `~/.local/bin/`)
+- **`arc42-lint`**: arc42 cross-section consistency, git provenance, and architecture drift linter (`--json`, `--check-drift`, `--strict`).
+- **`detect-mocks` / `zero-mock-detector`**: Production mock leakage and bodyless stub static detector.
 - **`coolify-control`**: Agnostic container discovery, live log inspection, deployment logs, and database query CLI.
 - **`codegraph-impact`**: AST & CodeGraph blast radius analyzer (callers, callees, affected test suites).
 - **`static-srp-analyzer`**: Deterministic static analyzer detecting bloated components (>180 lines, >50 lines functions) and abstraction bypasses.
 - **`vsa-boundary-checker`**: Architectural boundary linter forbidding cross-slice direct imports.
 
-### 4. Global & Repo-Level Guidelines
+### 6. Global & Repo-Level Guidelines
 - `GEMINI.md` / `AGENTS.md` universal standing rules.
 - Portable, git-ready repository-level `GEMINI.md` generation rules (zero external paths, zero hardcoded secrets).
 
@@ -64,6 +78,8 @@ python3 ~/.agent-skills/skills/craftsman-coder/scripts/test_codegraph_impact.py
 python3 ~/.agent-skills/skills/craftsman-coder/scripts/test_static_srp_analyzer.py
 python3 ~/.agent-skills/skills/craftsman-coder/scripts/test_vsa_boundary_checker.py
 python3 ~/.agent-skills/skills/thinkstation-coolify/scripts/test_coolify_control.py
+python3 ~/.agent-skills/skills/zero-mock-detector/tests/test_detector.py
+python3 ~/.agent-skills/skills/arc42-architect/tests/test_arc42_lint.py
 ```
 
 ---

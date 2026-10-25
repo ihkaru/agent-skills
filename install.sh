@@ -82,6 +82,15 @@ if [ -f "${SCRIPT_DIR}/skills/zero-mock-detector/scripts/main.py" ]; then
     echo "  ✅ Command: detect-mocks / zero-mock-detector"
 fi
 
+# arc42-lint
+if [ -f "${SCRIPT_DIR}/skills/arc42-architect/scripts/arc42-lint.py" ]; then
+    ln -sf "${SCRIPT_DIR}/skills/arc42-architect/scripts/arc42-lint.py" "${TARGET_BIN_DIR}/arc42-lint"
+    if [ "$(id -u)" -eq 0 ]; then
+        ln -sf "${SCRIPT_DIR}/skills/arc42-architect/scripts/arc42-lint.py" "/usr/local/bin/arc42-lint"
+    fi
+    echo "  ✅ Command: arc42-lint"
+fi
+
 # 5. Run Verification Gauntlet
 echo "🧪 Running verification tests..."
 python3 "${SCRIPT_DIR}/skills/craftsman-coder/scripts/test_codegraph_impact.py"
@@ -92,6 +101,9 @@ if [ -f "${SCRIPT_DIR}/skills/thinkstation-coolify/scripts/test_coolify_control.
 fi
 if [ -f "${SCRIPT_DIR}/skills/zero-mock-detector/tests/test_detector.py" ]; then
     python3 "${SCRIPT_DIR}/skills/zero-mock-detector/tests/test_detector.py"
+fi
+if [ -f "${SCRIPT_DIR}/skills/arc42-architect/tests/test_arc42_lint.py" ]; then
+    python3 "${SCRIPT_DIR}/skills/arc42-architect/tests/test_arc42_lint.py"
 fi
 
 echo ""
