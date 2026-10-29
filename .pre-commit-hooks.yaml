@@ -5,3 +5,11 @@
   language: python
   pass_filenames: false
   always_run: true
+
+- id: osv-scanner
+  name: OSV-Scanner Dependency CVE Gate
+  description: Fast polyglot vulnerability scanner for dependency manifests and lockfiles
+  entry: osv-scanner-gate --staged
+  language: python
+  pass_filenames: false
+  always_run: true

@@ -29,11 +29,19 @@ A disciplined, repo-agnostic engineering configuration, skills, and deterministi
 - Supports native **Mermaid C4** diagrams (`C4Context`, `C4Container`, `C4Component`, sequence flows) and **Q42 Quality Model** (492 tags across 8 properties).
 - Tailored for both greenfield systems and **in-flight / half-baked project reverse engineering**.
 
-### 4. Zero-Mock & Static Invariant Detector (`zero-mock-detector`)
+### 4. Google OSV-Scanner Dependency Security Gate (`osv-scanner`)
+- High-performance, language-agnostic dependency vulnerability scanner and remediation gate (Google OSV-Scanner).
+- Covers polyglot ecosystems: PHP (`composer.lock`), Node/TS (`package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`, `bun.lock`), Python (`poetry.lock`, `uv.lock`, `Pipfile.lock`, `requirements.txt`), Go (`go.mod`), Rust (`Cargo.lock`), Java (`pom.xml`, `gradle.lockfile`), and container SBOMs.
+- Features **zero-overhead git staged mode** (`osv-scanner-gate --staged`) executing in <0.05s when no manifests changed.
+- Automated guided remediation (`osv-scanner fix`) computing non-breaking upgrade paths.
+- Declarative audit trail and time-boxed debt exemptions via `osv-scanner.toml`.
+
+### 5. Zero-Mock & Static Invariant Detector (`zero-mock-detector`)
 - High-precision AST static analyzer detecting mock leakage, silent dummies, bodyless stubs, and fake latency in production pathways.
 - Enforces Dual-Tier Verification and repository-level technical debt citations.
 
-### 5. Deterministic Built-in CLI Tools (Installed to `~/.local/bin/`)
+### 6. Deterministic Built-in CLI Tools (Installed to `~/.local/bin/`)
+- **`osv-scanner-gate` / `osv-gate`**: Fast polyglot dependency CVE scanner and git pre-commit security gate (`--staged`, `--json`, `--fix`, `--min-severity`).
 - **`arc42-lint`**: arc42 cross-section consistency, git provenance, and architecture drift linter (`--json`, `--check-drift`, `--strict`).
 - **`arc42-pre-commit`**: Automated Git pre-commit gate blocking stale documentation and unstaged architecture changes (`arc42-lint --install-hook`).
 - **`detect-mocks` / `zero-mock-detector`**: Production mock leakage and bodyless stub static detector.
@@ -42,7 +50,7 @@ A disciplined, repo-agnostic engineering configuration, skills, and deterministi
 - **`static-srp-analyzer`**: Deterministic static analyzer detecting bloated components (>180 lines, >50 lines functions) and abstraction bypasses.
 - **`vsa-boundary-checker`**: Architectural boundary linter forbidding cross-slice direct imports.
 
-### 6. Global & Repo-Level Guidelines
+### 7. Global & Repo-Level Guidelines
 - `GEMINI.md` / `AGENTS.md` universal standing rules.
 - Portable, git-ready repository-level `GEMINI.md` generation rules (zero external paths, zero hardcoded secrets).
 
@@ -65,8 +73,9 @@ curl -fsSL https://raw.githubusercontent.com/ihkaru/agent-skills/main/install.sh
 The installer will:
 1. Register `~/.gemini/config/skills.json` and deploy global `GEMINI.md` rules.
 2. Link all skills into `~/.gemini/config/skills/`.
-3. Expose global executable commands (`coolify-control`, `static-srp-analyzer`, `codegraph-impact`, `vsa-boundary-checker`) into `~/.local/bin/`.
-4. Run verification tests across all toolchains.
+3. Auto-bootstrap `osv-scanner` binary if not present.
+4. Expose global executable commands (`osv-scanner-gate`, `coolify-control`, `static-srp-analyzer`, `codegraph-impact`, `vsa-boundary-checker`, `arc42-lint`, `detect-mocks`) into `~/.local/bin/`.
+5. Run verification tests across all toolchains.
 
 ---
 
@@ -81,6 +90,7 @@ python3 ~/.agent-skills/skills/craftsman-coder/scripts/test_vsa_boundary_checker
 python3 ~/.agent-skills/skills/thinkstation-coolify/scripts/test_coolify_control.py
 python3 ~/.agent-skills/skills/zero-mock-detector/tests/test_detector.py
 python3 ~/.agent-skills/skills/arc42-architect/tests/test_arc42_lint.py
+python3 ~/.agent-skills/skills/osv-scanner/tests/test_osv_scanner_gate.py
 ```
 
 ---

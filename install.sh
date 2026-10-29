@@ -42,7 +42,31 @@ for skill_path in "${SCRIPT_DIR}"/skills/*; do
     fi
 done
 
-# 4. Install Global CLI Tool Symlinks to ~/.local/bin
+# 4. Bootstrap osv-scanner binary if missing
+if ! command -v osv-scanner &>/dev/null && [ ! -f "${TARGET_BIN_DIR}/osv-scanner" ]; then
+    echo "🔍 'osv-scanner' binary not detected, bootstrapping..."
+    OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+    ARCH="$(uname -m)"
+    case "${ARCH}" in
+        x86_64) ARCH="amd64" ;;
+        aarch64|arm64) ARCH="arm64" ;;
+    esac
+
+    # Check pacman on Arch/CachyOS if root
+    if command -v pacman &>/dev/null && [ "$(id -u)" -eq 0 ]; then
+        pacman -S --noconfirm osv-scanner || true
+    fi
+
+    # Fallback to direct download from official Google OSV-Scanner GitHub releases
+    if ! command -v osv-scanner &>/dev/null && [ ! -f "${TARGET_BIN_DIR}/osv-scanner" ]; then
+        echo "  ⬇️  Downloading prebuilt osv-scanner for ${OS}_${ARCH}..."
+        LATEST_URL="https://github.com/google/osv-scanner/releases/latest/download/osv-scanner_${OS}_${ARCH}"
+        curl -fsSL "${LATEST_URL}" -o "${TARGET_BIN_DIR}/osv-scanner" || true
+        chmod +x "${TARGET_BIN_DIR}/osv-scanner" 2>/dev/null || true
+    fi
+fi
+
+# 5. Install Global CLI Tool Symlinks to ~/.local/bin
 echo "⚡ Installing global CLI tool commands into ~/.local/bin..."
 mkdir -p "${TARGET_BIN_DIR}"
 
@@ -97,7 +121,18 @@ if [ -f "${SCRIPT_DIR}/skills/arc42-architect/scripts/arc42-lint.py" ]; then
     echo "  ✅ Command: arc42-lint / arc42-pre-commit"
 fi
 
-# 5. Run Verification Gauntlet
+# osv-scanner-gate & osv-gate
+if [ -f "${SCRIPT_DIR}/skills/osv-scanner/scripts/osv_scanner_gate.py" ]; then
+    ln -sf "${SCRIPT_DIR}/skills/osv-scanner/scripts/osv_scanner_gate.py" "${TARGET_BIN_DIR}/osv-scanner-gate"
+    ln -sf "${SCRIPT_DIR}/skills/osv-scanner/scripts/osv_scanner_gate.py" "${TARGET_BIN_DIR}/osv-gate"
+    if [ "$(id -u)" -eq 0 ]; then
+        ln -sf "${SCRIPT_DIR}/skills/osv-scanner/scripts/osv_scanner_gate.py" "/usr/local/bin/osv-scanner-gate"
+        ln -sf "${SCRIPT_DIR}/skills/osv-scanner/scripts/osv_scanner_gate.py" "/usr/local/bin/osv-gate"
+    fi
+    echo "  ✅ Command: osv-scanner-gate / osv-gate"
+fi
+
+# 6. Run Verification Gauntlet
 echo "🧪 Running verification tests..."
 python3 "${SCRIPT_DIR}/skills/craftsman-coder/scripts/test_codegraph_impact.py"
 python3 "${SCRIPT_DIR}/skills/craftsman-coder/scripts/test_static_srp_analyzer.py"
@@ -110,6 +145,9 @@ if [ -f "${SCRIPT_DIR}/skills/zero-mock-detector/tests/test_detector.py" ]; then
 fi
 if [ -f "${SCRIPT_DIR}/skills/arc42-architect/tests/test_arc42_lint.py" ]; then
     python3 "${SCRIPT_DIR}/skills/arc42-architect/tests/test_arc42_lint.py"
+fi
+if [ -f "${SCRIPT_DIR}/skills/osv-scanner/tests/test_osv_scanner_gate.py" ]; then
+    python3 "${SCRIPT_DIR}/skills/osv-scanner/tests/test_osv_scanner_gate.py"
 fi
 
 echo ""

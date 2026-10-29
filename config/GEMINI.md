@@ -107,3 +107,8 @@ When building or recommending tools and skills for AI agents:
   - Never commit temporary agent scratch files (`notes.md`, `agent_notes.*`, `scratch_*.py`, `temp_*.py`, `*.log`) to production directories.
 - **Zero Rationalizing Comments:**
   - Prohibit comments attempting to rationalize fake/mock behavior (e.g. `// assume success for now`, `// dummy mock for testing`, `// fake return`). Real evidence (tests, measurements, ledger) must replace rationalizing comments.
+
+## 15. Dependency Security & Pre-Commit CVE Gate (Google OSV-Scanner)
+- **Zero Known CVEs Policy:** Whenever modifying or adding dependencies (`composer.json`, `package.json`, `requirements.txt`, `poetry.lock`, `uv.lock`, `go.mod`, `Cargo.toml`, `pom.xml`, etc.), agents must run `osv-scanner-gate --staged` or `osv-scanner scan source <path>` before committing.
+- **Guided Remediation First:** If vulnerabilities are found, resolve them via `osv-scanner fix` or explicit package upgrade to non-vulnerable versions.
+- **Audited Exemptions via osv-scanner.toml:** If a vulnerability cannot be updated immediately due to upstream constraints, it MUST be formally recorded in the repository's `osv-scanner.toml` under `[[IgnoredVulns]]` with a strict `ignoreUntil` date and rationale. Never bypass security gates silently.

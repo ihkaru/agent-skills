@@ -112,14 +112,24 @@ python3 ~/.gemini/config/skills/craftsman-coder/scripts/codegraph_impact.py <pat
      ```bash
      detect-mocks <path_to_repo> --strict
      ```
-  4. **Linter & Static Analysis** (e.g. `ruff check .`, `eslint`, `golangci-lint`)
-  5. **Type Checking** (e.g. `mypy`, `tsc --noEmit`)
-  6. **Full Test Suite** executed in parallel (e.g. `pytest -n auto`, `go test -parallel 4 ./...`)
+  4. **Dependency Security & CVE Gate (Google OSV-Scanner):**
+     ```bash
+     osv-scanner-gate --staged
+     ```
+     *(If manifests/lockfiles were modified, scans for known CVEs before committing. Resolves via `osv-scanner fix`).*
+  5. **Linter & Static Analysis** (e.g. `ruff check .`, `eslint`, `golangci-lint`)
+  6. **Type Checking** (e.g. `mypy`, `tsc --noEmit`)
+  7. **Full Test Suite** executed in parallel (e.g. `pytest -n auto`, `go test -parallel 4 ./...`)
 - Provide terminal evidence (exit codes, passing test summary) in your final response.
 
 ---
 
 ## Built-in Scripts & Tools
+
+- **Google OSV-Scanner Dependency Gate:**
+  `osv-scanner-gate` / [`skills/osv-scanner/`](../osv-scanner/)
+  - High-performance, language-agnostic dependency CVE scanner and remediation gate.
+  - Zero-overhead git staged mode (`osv-scanner-gate --staged`), machine-readable JSON output, and `osv-scanner fix` guided remediation.
 
 - **Zero-Mock & Silent Fallback Static Detector:**
   `detect-mocks` / [`skills/zero-mock-detector/`](../zero-mock-detector/)
