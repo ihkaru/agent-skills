@@ -1,8 +1,8 @@
 # 11. Risiko dan Hutang Teknis (Risks and Technical Debt)
 
 > [!INFO] **Architecture Provenance & Freshness**
-> - **Verified Commit**: `e284acb` (branch: `main`)
-> - **Verified Timestamp**: `2026-10-29T12:54:18+07:00`
+> - **Verified Commit**: `7ed205b` (branch: `main`)
+> - **Verified Timestamp**: `2026-10-29T13:02:00+07:00`
 > - **Tracked Paths**: `skills/`, `config/`, `install.sh`
 > - **Drift Status**: `verified`
 
