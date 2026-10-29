@@ -9,6 +9,13 @@ TARGET_CONFIG_DIR="${HOME}/.gemini/config"
 TARGET_SKILLS_DIR="${TARGET_CONFIG_DIR}/skills"
 TARGET_BIN_DIR="${HOME}/.local/bin"
 
+if [ -n "${SUDO_USER:-}" ] && [ "${SUDO_USER}" != "root" ]; then
+    USER_HOME="$(getent passwd "${SUDO_USER}" | cut -d: -f6)"
+    TARGET_CONFIG_DIR="${USER_HOME}/.gemini/config"
+    TARGET_SKILLS_DIR="${TARGET_CONFIG_DIR}/skills"
+    TARGET_BIN_DIR="${USER_HOME}/.local/bin"
+fi
+
 echo "🚀 Initializing Agent Skills & Tools bootstrap..."
 
 # 1. Create target directories
@@ -73,24 +80,36 @@ mkdir -p "${TARGET_BIN_DIR}"
 # coolify-control
 if [ -f "${SCRIPT_DIR}/skills/thinkstation-coolify/scripts/coolify_control.py" ]; then
     ln -sf "${SCRIPT_DIR}/skills/thinkstation-coolify/scripts/coolify_control.py" "${TARGET_BIN_DIR}/coolify-control"
+    if [ "$(id -u)" -eq 0 ]; then
+        ln -sf "${SCRIPT_DIR}/skills/thinkstation-coolify/scripts/coolify_control.py" "/usr/local/bin/coolify-control"
+    fi
     echo "  ✅ Command: coolify-control"
 fi
 
 # static-srp-analyzer
 if [ -f "${SCRIPT_DIR}/skills/craftsman-coder/scripts/static_srp_analyzer.py" ]; then
     ln -sf "${SCRIPT_DIR}/skills/craftsman-coder/scripts/static_srp_analyzer.py" "${TARGET_BIN_DIR}/static-srp-analyzer"
+    if [ "$(id -u)" -eq 0 ]; then
+        ln -sf "${SCRIPT_DIR}/skills/craftsman-coder/scripts/static_srp_analyzer.py" "/usr/local/bin/static-srp-analyzer"
+    fi
     echo "  ✅ Command: static-srp-analyzer"
 fi
 
 # codegraph-impact
 if [ -f "${SCRIPT_DIR}/skills/craftsman-coder/scripts/codegraph_impact.py" ]; then
     ln -sf "${SCRIPT_DIR}/skills/craftsman-coder/scripts/codegraph_impact.py" "${TARGET_BIN_DIR}/codegraph-impact"
+    if [ "$(id -u)" -eq 0 ]; then
+        ln -sf "${SCRIPT_DIR}/skills/craftsman-coder/scripts/codegraph_impact.py" "/usr/local/bin/codegraph-impact"
+    fi
     echo "  ✅ Command: codegraph-impact"
 fi
 
 # vsa-boundary-checker
 if [ -f "${SCRIPT_DIR}/skills/craftsman-coder/scripts/vsa_boundary_checker.py" ]; then
     ln -sf "${SCRIPT_DIR}/skills/craftsman-coder/scripts/vsa_boundary_checker.py" "${TARGET_BIN_DIR}/vsa-boundary-checker"
+    if [ "$(id -u)" -eq 0 ]; then
+        ln -sf "${SCRIPT_DIR}/skills/craftsman-coder/scripts/vsa_boundary_checker.py" "/usr/local/bin/vsa-boundary-checker"
+    fi
     echo "  ✅ Command: vsa-boundary-checker"
 fi
 
