@@ -132,6 +132,12 @@ if [ -f "${SCRIPT_DIR}/skills/osv-scanner/scripts/osv_scanner_gate.py" ]; then
     echo "  ✅ Command: osv-scanner-gate / osv-gate"
 fi
 
+# Auto-install unified pre-commit hook into repository
+if [ -d "${SCRIPT_DIR}/.git" ]; then
+    python3 "${SCRIPT_DIR}/skills/arc42-architect/scripts/arc42-lint.py" --install-hook "${SCRIPT_DIR}" >/dev/null 2>&1 || true
+    echo "  ✅ Pre-commit hook active in local repository"
+fi
+
 # 6. Run Verification Gauntlet
 echo "🧪 Running verification tests..."
 python3 "${SCRIPT_DIR}/skills/craftsman-coder/scripts/test_codegraph_impact.py"

@@ -1019,16 +1019,25 @@ def install_hook(target_dir: Path | None = None) -> int:
 
     hook_script = """#!/usr/bin/env bash
 # ==============================================================================
-# arc42 Architecture Drift & Consistency Gate (Pre-Commit Hook)
+# Agent Skills Unified Pre-Commit Security & Architecture Gate
 # ==============================================================================
 set -e
 
+# 1. Dependency Vulnerability CVE Gate (Google OSV-Scanner)
+if [ "${SKIP_OSV_SCANNER:-0}" != "1" ]; then
+    if command -v osv-scanner-gate >/dev/null 2>&1; then
+        osv-scanner-gate --staged
+    elif [ -f "${HOME}/.local/bin/osv-scanner-gate" ]; then
+        "${HOME}/.local/bin/osv-scanner-gate" --staged
+    fi
+fi
+
+# 2. arc42 Architecture Drift & Consistency Gate
 if [ "${SKIP_ARC42_LINT:-0}" = "1" ] || [ "${SKIP_DOC_GATE:-0}" = "1" ]; then
-    echo "ℹ️  arc42-lint: Pre-commit gate bypassed via SKIP_ARC42_LINT=1"
+    echo "ℹ️  arc42-lint: Pre-commit architecture gate bypassed via SKIP_ARC42_LINT=1"
     exit 0
 fi
 
-# Execute arc42-lint in pre-commit mode
 if command -v arc42-lint >/dev/null 2>&1; then
     exec arc42-lint --pre-commit
 elif command -v arc42-pre-commit >/dev/null 2>&1; then

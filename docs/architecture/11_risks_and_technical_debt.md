@@ -1,8 +1,8 @@
 # 11. Risiko dan Hutang Teknis (Risks and Technical Debt)
 
 > [!INFO] **Architecture Provenance & Freshness**
-> - **Verified Commit**: `7ed205b` (branch: `main`)
-> - **Verified Timestamp**: `2026-10-29T13:02:00+07:00`
+> - **Verified Commit**: `606a98b` (branch: `main`)
+> - **Verified Timestamp**: `2026-10-29T13:30:00+07:00`
 > - **Tracked Paths**: `skills/`, `config/`, `install.sh`
 > - **Drift Status**: `verified`
 
@@ -27,6 +27,6 @@ Berikut adalah daftar risiko yang diidentifikasi dari Keputusan Arsitektur (ADR-
 
 | ID Hutang | Area Komponen | Uraian Hutang Teknis | Rencana Remediasi & Target |
 |:---|:---|:---|:---|
-| **DEBT-01** | OSV-Scanner Gate | Call analysis saat ini hanya didukung untuk Go dan Rust melalui compiler eksternal (`--call-analysis go,rust`). Belum tersedia untuk ekosistem PHP dan Node.js. | Menunggu rilis upstream engine OSV-SCALIBR Google untuk dukungan *call graph* JavaScript dan PHP. |
+| **DEBT-01** | OSV-Scanner Gate | Pemindaian kerentanan lockfile (SCA) telah 100% poliglota (PHP, JS/TS, Python, Go, Rust, Java, .NET, Ruby). Namun, fitur ekstra *Call Analysis* (pengecekan reachability fungsi terpakai vs tidak) saat ini baru tersedia untuk Go dan Rust via compiler eksternal. | Mengandalkan mode pemindaian SCA standar untuk semua bahasa; menunggu upstream OSV-SCALIBR Google untuk ekspansi AST call-graph ke ekosistem JavaScript dan PHP. |
 | **DEBT-02** | VSA Boundary Checker | Konfigurasi batas slice (`.vsa-boundaries.json`) saat ini masih didefinisikan secara manual di level proyek pengguna dan belum terbuat secara otomatis saat inisialisasi repositori baru. | Menambahkan subperintah `vsa-boundary-checker --init` untuk melakukan *scaffolding* berkas konfigurasi awal. |
 | **DEBT-03** | ThinkStation Coolify CLI | Otomatisasi rotasi token SSH Infisical masih memerlukan sinkronisasi manual jika masa aktif kredensial mesin identity kedaluwarsa setelah 30 hari. | Menyediakan cron job latar belakang otomatis untuk memperbarui session token sebelum kedaluwarsa. |

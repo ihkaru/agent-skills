@@ -1,8 +1,8 @@
 # 2. Batasan Arsitektur (Architecture Constraints)
 
 > [!INFO] **Architecture Provenance & Freshness**
-> - **Verified Commit**: `7ed205b` (branch: `main`)
-> - **Verified Timestamp**: `2026-10-29T13:02:00+07:00`
+> - **Verified Commit**: `606a98b` (branch: `main`)
+> - **Verified Timestamp**: `2026-10-29T13:30:00+07:00`
 > - **Tracked Paths**: `skills/`, `config/`, `install.sh`
 > - **Drift Status**: `verified`
 
