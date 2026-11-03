@@ -1,8 +1,8 @@
 # 7. Tampilan Penyebaran (Deployment View)
 
 > [!INFO] **Architecture Provenance & Freshness**
-> - **Verified Commit**: `f681618` (branch: `main`)
-> - **Verified Timestamp**: `2026-11-03T12:45:00+07:00`
+> - **Verified Commit**: `1ab51ed` (branch: `main`)
+> - **Verified Timestamp**: `2026-11-03T13:31:00+07:00`
 > - **Tracked Paths**: `skills/`, `config/`, `install.sh`
 > - **Drift Status**: `verified`
 
