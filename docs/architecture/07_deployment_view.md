@@ -1,8 +1,8 @@
 # 7. Tampilan Penyebaran (Deployment View)
 
 > [!INFO] **Architecture Provenance & Freshness**
-> - **Verified Commit**: `1ab51ed` (branch: `main`)
-> - **Verified Timestamp**: `2026-11-03T13:31:00+07:00`
+> - **Verified Commit**: `de4254c` (branch: `main`)
+> - **Verified Timestamp**: `2026-11-05T14:30:00+07:00`
 > - **Tracked Paths**: `skills/`, `config/`, `install.sh`
 > - **Drift Status**: `verified`
 
@@ -82,4 +82,4 @@ Berikut adalah pemetaan penyebaran setiap blok pembangun Level 1 ke dalam sistem
 5. **ThinkStation Coolify CLI**:
    - **Lokasi Fisik**: Disimpan di `skills/thinkstation-coolify/` dan disymlink ke `~/.gemini/config/skills/thinkstation-coolify`.
    - **Kakas Eksekusi**: Ditautkan ke `~/.local/bin/coolify-control` (serta `/usr/local/bin/` jika root).
-   - **Konektivitas Jaringan**: Menghubungi Infisical Vault via HTTPS dan ThinkStation Coolify Server via WireGuard Tailscale Mesh (`100.101.49.42`) atau LAN IP (`192.168.0.136`).
+   - **Konektivitas Jaringan**: Menghubungi ThinkStation Coolify Server via WireGuard Tailscale Mesh (`100.101.49.42`) menggunakan Universal AGY Mesh HTTP API (port 8484 over SOCKS5 proxy `127.0.0.1:1055`) dengan fallback SSH ProxyCommand. Wajib mematuhi Invarian Zero 3rd-Party VPN Rule (dilarang menggunakan VPN eksternal seperti WARP/1.1.1.1/Wireguard saat terhubung ke Tailscale). Infisical Vault dihubungi via HTTPS untuk auto-restorasi kunci SSH.
