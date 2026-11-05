@@ -1,8 +1,8 @@
 # 9. Keputusan Arsitektur (Architecture Decisions - ADR)
 
 > [!INFO] **Architecture Provenance & Freshness**
-> - **Verified Commit**: `de4254c` (branch: `main`)
-> - **Verified Timestamp**: `2026-11-05T14:30:00+07:00`
+> - **Verified Commit**: `52287e6` (branch: `main`)
+> - **Verified Timestamp**: `2026-11-05T14:37:00+07:00`
 > - **Tracked Paths**: `skills/`, `config/`, `install.sh`
 > - **Drift Status**: `verified`
 

@@ -55,7 +55,7 @@ flowchart TD
     Tier2 -.-> DockerEngine
 ```
 
-* **Tier 1 (Mesh HTTP API - Primary)**: Directly targets `http://100.101.49.42:8484/api/cmd` via SOCKS5 proxy `socks5h://127.0.0.1:1055` with Bearer token `agy-universal-mesh-token-2026`. Non-interactive, latency $<100\text{ms}$, avoids SSH interactive web re-auth checks.
+* **Tier 1 (Mesh HTTP API - Primary)**: Directly targets `http://100.101.49.42:8484/api/cmd` via SOCKS5 proxy `socks5h://127.0.0.1:1055` with Bearer token injected dynamically from Infisical secret `AGY_MESH_SECRET` or environment variable `AGY_MESH_TOKEN`. Non-interactive, latency $<100\text{ms}$, avoids SSH interactive web re-auth checks.
 * **Tier 2 (SSH via ProxyCommand - Fallback)**: Automatically injects `SERVER_SSH_PRIVATE_KEY` from Infisical (`f13379e0-9661-4f8e-81ef-0e81d1502da1`, env `dev`) and connects using `nc -X 5 -x 127.0.0.1:1055 %h %p`.
 
 ---

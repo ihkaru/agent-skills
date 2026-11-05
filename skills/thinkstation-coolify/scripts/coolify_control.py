@@ -33,10 +33,49 @@ DEFAULT_KEY_PATH = Path.home() / ".ssh" / "id_ed25519_agent"
 DEFAULT_USER = "server"
 TAILSCALE_HOST = "100.101.49.42"
 DEFAULT_MESH_NODE = "100.101.49.42:8484"
-DEFAULT_MESH_TOKEN = "agy-universal-mesh-token-2026"
 DEFAULT_SOCKS5_PROXY = "socks5h://127.0.0.1:1055"
+DEFAULT_MESH_TOKEN_ENV_VARS = ["AGY_MESH_TOKEN", "AGY_MESH_SECRET"]
+DEFAULT_MESH_CACHE_FILE = Path.home() / ".gemini" / ".mesh_token"
 INFISICAL_PROJECT_ID = "f13379e0-9661-4f8e-81ef-0e81d1502da1"
 INFISICAL_ENV = "dev"
+
+
+def resolve_mesh_token() -> str:
+    """
+    Dynamically retrieves the AGY Mesh authentication token without hardcoding secrets:
+    1. Checks environment variables AGY_MESH_TOKEN or AGY_MESH_SECRET.
+    2. Checks locally cached token file ~/.gemini/.mesh_token (mode 0600).
+    3. Dynamically queries Infisical Vault (secret 'AGY_MESH_SECRET') and caches locally.
+    """
+    for var in DEFAULT_MESH_TOKEN_ENV_VARS:
+        val = os.environ.get(var)
+        if val and val.strip():
+            return val.strip()
+
+    if DEFAULT_MESH_CACHE_FILE.exists() and DEFAULT_MESH_CACHE_FILE.stat().st_size > 0:
+        try:
+            return DEFAULT_MESH_CACHE_FILE.read_text(encoding="utf-8").strip()
+        except Exception:
+            pass
+
+    cmd = [
+        "infisical", "secrets", "get", "AGY_MESH_SECRET",
+        "--projectId", INFISICAL_PROJECT_ID,
+        "--env", INFISICAL_ENV,
+        "--plain"
+    ]
+    try:
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+        token = res.stdout.strip()
+        if token:
+            DEFAULT_MESH_CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
+            DEFAULT_MESH_CACHE_FILE.write_text(token, encoding="utf-8")
+            DEFAULT_MESH_CACHE_FILE.chmod(0o600)
+            return token
+    except Exception as e:
+        sys.stderr.write(f"Warning: Failed to dynamically retrieve AGY_MESH_SECRET from Infisical: {e}\n")
+
+    return ""
 
 ANSI_REGEX = re.compile(r'\x1b\[[0-9;]*[a-zA-Z]')
 
@@ -96,13 +135,13 @@ class RemoteManager:
     def __init__(
         self,
         mesh_node: str = DEFAULT_MESH_NODE,
-        mesh_token: str = DEFAULT_MESH_TOKEN,
+        mesh_token: Optional[str] = None,
         proxy: str = DEFAULT_SOCKS5_PROXY,
         key_path: Path = DEFAULT_KEY_PATH,
         user: str = DEFAULT_USER
     ):
         self.mesh_node = mesh_node
-        self.mesh_token = mesh_token
+        self.mesh_token = mesh_token or resolve_mesh_token()
         self.proxy = proxy
         self.key_path = key_path
         self.user = user
