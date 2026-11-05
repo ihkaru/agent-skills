@@ -556,6 +556,8 @@ class CoolifyController:
 
     def trigger_deployment(self, app_or_uuid: str, force_rebuild: bool = True) -> Tuple[bool, str]:
         """Triggers application deployment via Coolify tinker queue."""
+        import uuid as _uuid
+        dep_uuid = str(_uuid.uuid4())
         app_key = app_or_uuid.lower().strip()
         uuid = KNOWN_APPS.get(app_key, {}).get("uuid", app_or_uuid)
         rebuild_str = "true" if force_rebuild else "false"
@@ -564,10 +566,10 @@ class CoolifyController:
             f"docker exec coolify php /var/www/html/artisan tinker --execute='"
             f"$app = \\App\\Models\\Application::where(\"uuid\", \"{uuid}\")->first(); "
             f"if (!$app) {{ echo \"ERROR_APP_NOT_FOUND\"; exit(1); }} "
-            f"$dep = queue_application_deployment(application: $app, force_rebuild: {rebuild_str}); "
+            f"$dep = queue_application_deployment(application: $app, deployment_uuid: \"{dep_uuid}\", force_rebuild: {rebuild_str}); "
             f"if (is_array($dep) && isset($dep[\"status\"]) && $dep[\"status\"] === \"queue_full\") {{ echo \"ERROR_QUEUE_FULL\"; exit(1); }} "
             f"$uid = is_object($dep) ? ($dep->deployment_uuid ?? null) : (is_array($dep) && isset($dep[0]) ? $dep[0]->deployment_uuid : null); "
-            f"echo \"QUEUED:\" . ($uid ?: \"OK\");'"
+            f"echo \"QUEUED:\" . ($uid ?: \"{dep_uuid}\");'"
         )
         code, out, err = self.remote.run_remote(tinker_cmd)
         if code == 0 and "QUEUED:" in out:
